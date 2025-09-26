@@ -1,0 +1,379 @@
+<!-- agent/templates/index.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asistente de Licencias de Cannabis</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            max-width: 900px; 
+            margin: 0 auto; 
+            padding: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .chat-container { 
+            background: white; 
+            border-radius: 15px; 
+            padding: 25px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .header h1 {
+            color: #333;
+            font-size: 2.2em;
+            margin-bottom: 5px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        .status-online {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .status-offline {
+            background: #f44336;
+            color: white;
+        }
+        
+        .messages { 
+            flex: 1;
+            overflow-y: auto; 
+            border: 1px solid #e0e0e0; 
+            padding: 15px; 
+            margin-bottom: 15px;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+        
+        .message { 
+            margin: 15px 0; 
+            padding: 12px 15px; 
+            border-radius: 12px;
+            max-width: 80%;
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .user { 
+            background: #007bff; 
+            color: white;
+            margin-left: auto;
+            margin-right: 10px;
+        }
+        
+        .bot { 
+            background: white; 
+            color: #333;
+            border: 1px solid #e0e0e0;
+            margin-right: auto;
+            margin-left: 10px;
+        }
+        
+        .input-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        input[type="text"] { 
+            flex: 1;
+            padding: 12px 15px; 
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 1em;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            border-color: #007bff;
+        }
+        
+        button { 
+            padding: 12px 25px; 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.3s;
+        }
+        
+        button:hover { 
+            background: #0056b3; 
+            transform: translateY(-1px);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .reset-btn {
+            background: #6c757d;
+        }
+        
+        .reset-btn:hover {
+            background: #545b62;
+        }
+        
+        .typing-indicator {
+            display: none;
+            padding: 10px 15px;
+            background: #f0f0f0;
+            border-radius: 12px;
+            margin: 10px 0;
+            max-width: 80px;
+        }
+        
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #999;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+        
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-5px); }
+        }
+        
+        .timestamp {
+            font-size: 0.8em;
+            color: #999;
+            margin-top: 5px;
+            text-align: right;
+        }
+        
+        /* Scrollbar personalizado */
+        .messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .messages::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        .messages::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        
+        .messages::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="header">
+            <h1>🤖 Asistente de Licencias de Cannabis</h1>
+            <div id="statusIndicator" class="status-indicator status-offline">
+                Verificando estado...
+            </div>
+        </div>
+        
+        <div class="messages" id="messages"></div>
+        
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="typing-dots">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+        </div>
+        
+        <div class="input-container">
+            <input type="text" id="userInput" placeholder="Escribe tu consulta sobre licencias de cannabis..." 
+                   onkeypress="handleKeyPress(event)" autocomplete="off">
+            <button onclick="sendMessage()" id="sendBtn">Enviar</button>
+            <button onclick="resetChat()" class="reset-btn">Reiniciar</button>
+        </div>
+    </div>
+
+    <script>
+        let isProcessing = false;
+        
+        // Verificar estado del servicio al cargar
+        async function checkStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                const statusIndicator = document.getElementById('statusIndicator');
+                if (data.status === 'running' && data.agent_initialized) {
+                    statusIndicator.textContent = '✅ Conectado';
+                    statusIndicator.className = 'status-indicator status-online';
+                } else {
+                    statusIndicator.textContent = '❌ Problemas de conexión';
+                    statusIndicator.className = 'status-indicator status-offline';
+                }
+            } catch (error) {
+                document.getElementById('statusIndicator').textContent = '❌ Error de conexión';
+            }
+        }
+        
+        function addMessage(sender, text, timestamp = null) {
+            const messages = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const time = timestamp || new Date().toLocaleTimeString('es-ES', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            
+            messageDiv.innerHTML = `
+                <strong>${sender === 'user' ? '👤 Tú' : '🤖 Asistente'}:</strong><br>
+                ${text.replace(/\n/g, '<br>')}
+                <div class="timestamp">${time}</div>
+            `;
+            
+            messages.appendChild(messageDiv);
+            messages.scrollTop = messages.scrollHeight;
+        }
+        
+        function showTypingIndicator() {
+            document.getElementById('typingIndicator').style.display = 'block';
+            document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+        }
+        
+        function hideTypingIndicator() {
+            document.getElementById('typingIndicator').style.display = 'none';
+        }
+        
+        async function sendMessage() {
+            if (isProcessing) return;
+            
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Agregar mensaje del usuario
+            addMessage('user', message);
+            input.value = '';
+            
+            // Deshabilitar entrada mientras se procesa
+            isProcessing = true;
+            document.getElementById('sendBtn').disabled = true;
+            input.disabled = true;
+            
+            // Mostrar indicador de typing
+            showTypingIndicator();
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+                
+                const data = await response.json();
+                
+                hideTypingIndicator();
+                
+                if (data.status === 'success') {
+                    addMessage('bot', data.response);
+                } else {
+                    addMessage('bot', '❌ Error: ' + (data.error || 'Error desconocido'));
+                }
+                
+            } catch (error) {
+                hideTypingIndicator();
+                addMessage('bot', '❌ Error de conexión con el servidor');
+                console.error('Error:', error);
+            } finally {
+                // Rehabilitar entrada
+                isProcessing = false;
+                document.getElementById('sendBtn').disabled = false;
+                input.disabled = false;
+                input.focus();
+            }
+        }
+        
+        async function resetChat() {
+            if (isProcessing) return;
+            
+            try {
+                await fetch('/api/reset', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                document.getElementById('messages').innerHTML = '';
+                addMessage('bot', '¡Conversación reiniciada! ¿En qué puedo ayudarte?');
+                
+            } catch (error) {
+                console.error('Error reiniciando chat:', error);
+                addMessage('bot', '❌ Error al reiniciar la conversación');
+            }
+        }
+        
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+        
+        // Mensaje inicial y verificación de estado
+        window.onload = function() {
+            checkStatus();
+            addMessage('bot', '¡Hola! Soy tu asistente especializado en licencias de cannabis en Colombia. ¿En qué puedo ayudarte?');
+            
+            // Verificar estado cada 30 segundos
+            setInterval(checkStatus, 30000);
+            
+            // Enfocar el input al cargar
+            document.getElementById('userInput').focus();
+        }
+    </script>
+</body>
+</html>
